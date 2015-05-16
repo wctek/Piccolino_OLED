@@ -1,0 +1,28 @@
+########################################
+# Syntax Coloring Map For Piccolino_OLED
+########################################
+
+########################################
+# Datatypes (KEYWORD1)
+########################################
+Piccolino_OLED	KEYWORD1
+
+########################################
+# Methods and Functions (KEYWORD2)
+########################################
+
+update		KEYWORD2
+clear		KEYWORD2
+setTextSize	KEYWORD2
+setCursor	KEYWORD2
+drawPixel	KEYWORD2
+drawLine	KEYWORD2
+drawChar	KEYWORD2
+fillRect	KEYWORD2
+updateRow	KEYWORD2
+
+
+########################################
+# Constants (LITERAL1)
+########################################
+
