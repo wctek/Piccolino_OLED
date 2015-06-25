@@ -47,6 +47,8 @@
 
 #define WHITE 1
 #define BLACK 0
+#define ON    1
+#define OFF   0
 
 class Piccolino_OLED : public Print  {
 public:
@@ -80,6 +82,9 @@ public:
   void updateRow(int rowID);
   void updateRow(int startID, int endID);
   byte buff[1024]; // video buffer
+  void displayOFF();
+  void displayON();
+  void dim(bool how);
 
 protected:
   uint8_t _i2caddr;

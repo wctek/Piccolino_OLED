@@ -20,9 +20,17 @@ drawLine	KEYWORD2
 drawChar	KEYWORD2
 fillRect	KEYWORD2
 updateRow	KEYWORD2
-
+displayON	KEYWORD2
+displayOff	KEYWORD2
+dim			KEYWORD2
 
 ########################################
 # Constants (LITERAL1)
 ########################################
 
+ON	LITERAL1
+OFF	LITERAL1
+NORMAL	LITERAL1
+INVERSE	LITERAL1
+BLACK	LITERAL1
+WHITE	LITERAL1
