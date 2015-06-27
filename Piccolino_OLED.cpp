@@ -5,6 +5,8 @@
 * Some of the functions were borrowed from Adafruit's GFX    *
 * Library, so thank her for them (see below).                *
 *                                                            *
+* Version: 1.2 - June 2015                                   *
+*                                                            *
 * Written by fr333n3rgy@yahoo.com for WCTEK.com              *
 *************************************************************/
 
