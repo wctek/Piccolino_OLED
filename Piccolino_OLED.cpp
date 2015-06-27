@@ -79,7 +79,8 @@ void Piccolino_OLED::dim(bool how)
 }
 void Piccolino_OLED::clearpart(int from, int tto)
 {
-  memset(buff,from*128,(tto*128)+128);//clear the back buffer.
+  int bytestoclear=((tto+1)-from)*128;
+  memset(&buff[from*128],0,bytestoclear);//clear the back buffer.
 }
 
 void Piccolino_OLED::displayOFF()
