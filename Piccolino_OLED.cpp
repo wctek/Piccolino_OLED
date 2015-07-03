@@ -241,7 +241,7 @@ void Piccolino_OLED::drawPixel(int16_t x, int16_t y, uint16_t color)
   unsigned char val;
 
 if (x>127||y>63) return;
-if (x<1||y<1) return;
+if (x<0||y<0) return;
 
   row = y/8;
   offset =y%8;
@@ -314,14 +314,22 @@ void Piccolino_OLED::setTextColor(uint16_t c,uint16_t b) {
   textbgcolor = b;
 }
 
-void Piccolino_OLED::fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color) {
+void Piccolino_OLED::fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color) {  
  for (int16_t i=x; i<x+w; i++) {
     drawLine(i, y, i, y+h-1, color);
   }
 }
 
+void Piccolino_OLED::drawRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color) {  
+  drawLine(x, y, x, y+h, color);
+  drawLine(x+w, y, x+w, y+h, color);
+  drawLine(x, y, x+w, y, color);
+  drawLine(x, y+h, x+w, y+h, color);
+}
+
 // Bresenham's algorithm - borrowed from Adafruit's GFX Library
 void Piccolino_OLED::drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint16_t color) {
+
   int16_t steep = abs(y1 - y0) > abs(x1 - x0);
 
   if (steep) {
@@ -349,9 +357,15 @@ void Piccolino_OLED::drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, ui
 
   for (; x0<=x1; x0++) {
     if (steep) {
-     drawPixel(y0, x0, color);
+      if(color==GRAY)
+        drawPixel(y0, x0, !(x0%2));
+      else
+        drawPixel(y0, x0, color);
     } else {
-     drawPixel(x0, y0, color);
+      if(color==GRAY)
+        drawPixel(x0, y0, !(x0%2));
+      else
+        drawPixel(x0, y0, color);
     }
     err -= dy;
     if (err < 0) {

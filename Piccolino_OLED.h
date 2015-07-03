@@ -45,8 +45,10 @@
 
 #define swap(a, b) { int16_t t = a; a = b; b = t; }
 
+#define GRAY  2
 #define WHITE 1
 #define BLACK 0
+
 #define ON    1
 #define OFF   0
 
@@ -73,6 +75,7 @@ public:
   void drawPixel(int16_t x, int16_t y, uint16_t color);
   void drawChar(int16_t x, int16_t y, unsigned char c, uint16_t color, uint16_t bg, uint8_t size);
   void setCursor(int16_t x, int16_t y);
+  void drawRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color);
   void fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color);
   void setTextSize(uint8_t s);
   void setTextColor(uint16_t c);
