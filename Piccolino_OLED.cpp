@@ -232,6 +232,7 @@ void Piccolino_OLED::updateRow(int startID, int endID)
   }
 }
 
+
 // Original concept borrowed from Adafruit's GFX library modified for Piccolino by AS
 void Piccolino_OLED::drawPixel(int16_t x, int16_t y, uint16_t color)
 {
@@ -371,6 +372,64 @@ void Piccolino_OLED::drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, ui
     if (err < 0) {
       y0 += ystep;
       err += dx;
+    }
+  }
+}
+
+/**
+ * Get the color that should be used
+ *
+ * This function is to deal with Gray since every other pixel is printed
+ *
+ * @param color The color that is requested
+ * @param index Current index of the pixel that is to be printed
+ * @return The color to be used
+ */
+uint16_t Piccolino_OLED::getColor(uint16_t color, uint32_t index)
+{
+  if(color == GRAY) {
+    return !(index % 2);
+  }
+  return color;
+}
+
+/**
+ * Draw a circle with an option to fill it
+ *
+ * NOTE: The caller must call the display update function
+ * in order for the circle to be displayed.
+ *
+ * @param cx The center of the circle - X
+ * @param cy The center of the circle - Y
+ * @param radius The radius of the circle
+ * @param color The color of the circle and fill if applicable
+ * @param fill Whether to fill the circle
+ */
+void Piccolino_OLED::drawCircle(
+  int16_t cx, int16_t cy, int16_t radius,
+  uint16_t color, bool fill)
+{
+  int deg;
+  double px, py;
+  uint16_t cur_color;
+  for(deg = 0; deg < 360; deg++) {
+    px = cx + (cos(deg) * radius);
+    py = cy + (sin(deg) * radius);
+    cur_color = getColor(color, deg);
+    drawPixel(px, py, cur_color);
+
+    // Filling
+    if(fill) {
+      int ix;
+      if(px >= cx) {
+        for(ix = cx; ix < px; ix++) {
+          drawPixel(ix, py, cur_color);
+        }
+      } else {
+        for(ix = cx; ix > px; ix--) {
+          drawPixel(ix, py, cur_color);
+        }
+      }
     }
   }
 }
