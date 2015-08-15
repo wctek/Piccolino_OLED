@@ -88,6 +88,9 @@ public:
   void displayOFF();
   void displayON();
   void dim(bool how);
+  uint16_t getColor(uint16_t color, uint32_t index);
+  void drawCircle(int16_t cx, int16_t cy, int16_t radius,
+                  uint16_t color, bool fill);
 
 protected:
   uint8_t _i2caddr;
