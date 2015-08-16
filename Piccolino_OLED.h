@@ -52,18 +52,31 @@
 #define ON    1
 #define OFF   0
 
+#define BUFFER_SIZE 1024
+#define TMP_BUFFER_SIZE 128
+
 class Piccolino_OLED : public Print  {
 public:
 
   Piccolino_OLED();
   ~Piccolino_OLED();
 
-  void begin(uint8_t switchvcc = SSD1306_SWITCHCAPVCC, uint8_t i2caddr = SSD1306_I2C_ADDRESS);
+  // Video Buffer
+  byte *buff;
+
+  // LCD Size
+  uint16_t width = SSD1306_LCDWIDTH;
+  uint16_t height = SSD1306_LCDHEIGHT;
+
+  void begin(bool use_sram = false);
+  void begin_sram();
+  void setVss(uint8_t vss);
+  void setI2CAddr(uint8_t i2caddr);
   void ssd1306_command(uint8_t c);
   void ssd1306_data(uint8_t c);
 
   void invertDisplay(uint8_t i);
-  
+
   void update();
   void clearBuffer();
 
@@ -84,7 +97,7 @@ public:
   virtual size_t write(uint8_t);
   void updateRow(int rowID);
   void updateRow(int startID, int endID);
-  byte buff[1024]; // video buffer
+  //byte buff[1024]; // video buffer
   void displayOFF();
   void displayON();
   void dim(bool how);
@@ -93,10 +106,11 @@ public:
                   uint16_t color, bool fill);
 
 protected:
-  uint8_t _i2caddr;
-    int16_t cursor_x, cursor_y, textcolor, textbgcolor;
-    uint8_t textsize;
-    boolean  wrap; // If set, 'wrap' text at right edge of display
+  uint8_t _i2caddr, _switchvss;
+  int16_t cursor_x, cursor_y, textcolor, textbgcolor;
+  uint8_t textsize;
+  boolean sram; /**< Whether using SRAM or not */
+  boolean  wrap; // If set, 'wrap' text at right edge of display
 
 private:
   int8_t sclk, dc, rst, cs;
