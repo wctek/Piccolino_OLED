@@ -13,61 +13,98 @@
 
 #include "Piccolino_OLED.h"
 #include "glcdfont.c"
+#include <Piccolino_RAM.h>
 
+Piccolino_RAM _v_ram;
+
+/**
+ * Initialize the class and set the default settings
+ */
 Piccolino_OLED::Piccolino_OLED() {
-	// nothing here now- all done in 'begin'
+  cursor_x = 0;
+  cursor_y = 0;
+  textcolor = WHITE;
+  textbgcolor = BLACK;
+  _switchvss = SSD1306_SWITCHCAPVCC;
+  _i2caddr = SSD1306_I2C_ADDRESS;
+  buff = NULL;
 }
 
+void Piccolino_OLED::setVss(uint8_t vss) {
+  _switchvss = vss;
+}
 
-void Piccolino_OLED::begin(uint8_t vccstate, uint8_t i2caddr) {
-    _i2caddr = i2caddr;
-    cursor_x=0;
-    cursor_y=0;
-    textcolor=WHITE;
-    textbgcolor=BLACK;
+void Piccolino_OLED::setI2CAddr(uint8_t i2caddr) {
+  _i2caddr = i2caddr;
+}
 
-    // set pin directions
-    // I2C Init
-    Wire.begin(); // Is this the right place for this?
-  
-    // Init sequence for 128x64 OLED module
-    ssd1306_command(SSD1306_DISPLAYOFF);                    // 0xAE
-    ssd1306_command(SSD1306_SETDISPLAYCLOCKDIV);            // 0xD5
-    ssd1306_command(0x80);                                  // the suggested ratio 0x80
-    ssd1306_command(SSD1306_SETMULTIPLEX);                  // 0xA8
-    ssd1306_command(0x3F);
-    ssd1306_command(SSD1306_SETDISPLAYOFFSET);              // 0xD3
-    ssd1306_command(0x0);                                   // offset
-    ssd1306_command(SSD1306_SETSTARTLINE | 0x0);            // line #0
-    ssd1306_command(SSD1306_CHARGEPUMP);                    // 0x8D
-    ssd1306_command(0x14);
-    ssd1306_command(SSD1306_MEMORYMODE);                    // 0x20
-    ssd1306_command(0x00);                                  // 0x0 act like ks0108
-    ssd1306_command(SSD1306_SEGREMAP | 0x1);
-    ssd1306_command(SSD1306_COMSCANDEC);
-    ssd1306_command(SSD1306_SETCOMPINS);                    // 0xDA
-    ssd1306_command(0x12);
-    ssd1306_command(SSD1306_SETCONTRAST);                   // 0x81
-    ssd1306_command(0xCF);
-    ssd1306_command(SSD1306_SETPRECHARGE);                  // 0xd9
-    ssd1306_command(0xF1);
-    ssd1306_command(SSD1306_SETVCOMDETECT);                 // 0xDB
-    ssd1306_command(0x40);
-    ssd1306_command(SSD1306_DISPLAYALLON_RESUME);           // 0xA4
-    ssd1306_command(SSD1306_NORMALDISPLAY);                 // 0xA6
+void Piccolino_OLED::begin(bool use_sram) {
+  bool external_vcc = _switchvss == SSD1306_EXTERNALVCC;
 
-    clear(); // clear sram ...
-    setTextColor(WHITE);
-    setTextSize(1);
-    update();
+  sram = use_sram;
+  if(sram) {
+    // Initialize RAM
+    _v_ram.begin(ADDR_VIDEOBUFFER);
+    buff = (byte *)calloc(TMP_BUFFER_SIZE, sizeof(byte));
+  } else {
+    // Allocate the buffer to 1K
+    buff = (byte *)calloc(BUFFER_SIZE, sizeof(byte));
+  }
+  if(!buff) {
+    abort();
+  }
 
-    ssd1306_command(SSD1306_DISPLAYON);//--turn on oled panel
+  // set pin directions
+  // I2C Init
+  Wire.begin(); // Is this the right place for this?
 
+  // Init sequence for 128x64 OLED module
+  ssd1306_command(SSD1306_DISPLAYOFF);                    // 0xAE
+  ssd1306_command(SSD1306_SETDISPLAYCLOCKDIV);            // 0xD5
+  ssd1306_command(0x80);                                  // the suggested ratio 0x80
+  ssd1306_command(SSD1306_SETMULTIPLEX);                  // 0xA8
+  ssd1306_command(0x3F);
+  ssd1306_command(SSD1306_SETDISPLAYOFFSET);              // 0xD3
+  ssd1306_command(0x0);                                   // offset
+  ssd1306_command(SSD1306_SETSTARTLINE | 0x0);            // line #0
+  ssd1306_command(SSD1306_CHARGEPUMP);                    // 0x8D
+  ssd1306_command(external_vcc ? 0x10 : 0x14);
+  ssd1306_command(SSD1306_MEMORYMODE);                    // 0x20
+  ssd1306_command(0x00);                                  // 0x0 act like ks0108
+  ssd1306_command(SSD1306_SEGREMAP | 0x1);
+  ssd1306_command(SSD1306_COMSCANDEC);
+  ssd1306_command(SSD1306_SETCOMPINS);                    // 0xDA
+  ssd1306_command(0x12);
+  ssd1306_command(SSD1306_SETCONTRAST);                   // 0x81
+  ssd1306_command(external_vcc ? 0x9F: 0xCF);
+  ssd1306_command(SSD1306_SETPRECHARGE);                  // 0xd9
+  ssd1306_command(external_vcc ? 0x22 : 0xF1);
+  ssd1306_command(SSD1306_SETVCOMDETECT);                 // 0xDB
+  ssd1306_command(0x40);
+  ssd1306_command(SSD1306_DISPLAYALLON_RESUME);           // 0xA4
+  ssd1306_command(SSD1306_NORMALDISPLAY);                 // 0xA6
+
+  clear(); // clear sram ...
+  setTextColor(WHITE);
+  setTextSize(1);
+  update();
+
+  ssd1306_command(SSD1306_DISPLAYON);//--turn on oled panel
+}
+
+/**
+ * Initialize the display using SRAM
+ *
+ * Slower but uses only 128 bytes in local memory instead
+ * of 1K.
+ */
+void Piccolino_OLED::begin_sram() {
+  begin(true);
 }
 
 void Piccolino_OLED::clearpart(int from)
 {
-clearpart(from,7);
+  clearpart(from,7);
 }
 
 void Piccolino_OLED::dim(bool how)
@@ -79,10 +116,18 @@ void Piccolino_OLED::dim(bool how)
     else
       ssd1306_command(0xCF);
 }
+
 void Piccolino_OLED::clearpart(int from, int tto)
 {
-  int bytestoclear=((tto+1)-from)*128;
-  memset(&buff[from*128],0,bytestoclear);//clear the back buffer.
+  if(sram) {
+    memset(buff, 0, TMP_BUFFER_SIZE);
+    for(int f=from; f<=tto; f++) {
+      _v_ram.write(f*SSD1306_LCDWIDTH, buff, TMP_BUFFER_SIZE);
+    }
+  } else {
+    int bytestoclear=((tto+1)-from)*128;
+    memset(&buff[from*128],0,bytestoclear);
+  }
 }
 
 void Piccolino_OLED::displayOFF()
@@ -124,40 +169,7 @@ void Piccolino_OLED::ssd1306_data(uint8_t c) {
 
 void Piccolino_OLED::update()
 {
-  unsigned char x;
-  int pos=0;
-
-    ssd1306_command(SSD1306_SETLOWCOLUMN | 0x0);  // low col = 0
-    ssd1306_command(SSD1306_SETHIGHCOLUMN | 0x0);  // hi col = 0
-    ssd1306_command(SSD1306_SETSTARTLINE | 0x0); // line #0
-
-    // save I2C bitrate
-    uint8_t twbrbackup = TWBR;
-    TWBR = 18; // upgrade to 400KHz!
-
-for (char rowID=0; rowID<8; rowID++){
-
-  pos=0;
-      
-    Wire.beginTransmission(_i2caddr);
-    Wire.write(0x00); // send command
-    Wire.write(0xB0+rowID);
-    Wire.write(0);
-    Wire.endTransmission();
-
-    pos=rowID*SSD1306_LCDWIDTH;
-
-        for(byte j = 0; j < 8; j++){
-            Wire.beginTransmission(_i2caddr);
-            Wire.write(0x40);
-            for (byte k = 0; k < 16; k++) {
-                Wire.write(buff[pos++]);
-            }
-        Wire.endTransmission();
-        }
-  }
-
-    TWBR = twbrbackup;   
+  updateRow(0, 8);
 }
 
 void Piccolino_OLED::clearLine(byte line)
@@ -192,35 +204,39 @@ void Piccolino_OLED::updateRow(int rowID)
 {
   unsigned char x;
   int pos=0;
+  byte *buffer = NULL;
 
-    ssd1306_command(SSD1306_SETLOWCOLUMN | 0x0);  // low col = 0
-    ssd1306_command(SSD1306_SETHIGHCOLUMN | 0x0);  // hi col = 0
-    ssd1306_command(SSD1306_SETSTARTLINE | 0x0); // line #0
+  ssd1306_command(SSD1306_SETLOWCOLUMN | 0x0);  // low col = 0
+  ssd1306_command(SSD1306_SETHIGHCOLUMN | 0x0);  // hi col = 0
+  ssd1306_command(SSD1306_SETSTARTLINE | 0x0); // line #0
 
-    // save I2C bitrate
-    uint8_t twbrbackup = TWBR;
-    TWBR = 18; // upgrade to 400KHz!
+  // save I2C bitrate
+  uint8_t twbrbackup = TWBR;
+  TWBR = 18; // upgrade to 400KHz!
 
-    
+  Wire.beginTransmission(_i2caddr);
+  Wire.write(0x00); // send command
+  Wire.write(0xB0+rowID);
+  Wire.write(0);
+  Wire.endTransmission();
+
+  if(sram) {
+    _v_ram.read(rowID*SSD1306_LCDWIDTH, buff, TMP_BUFFER_SIZE);
+    buffer = buff;
+  } else {
+    pos = rowID*SSD1306_LCDWIDTH;
+    buffer = buff;
+  }
+
+  for(byte j = 0; j < 8; j++){
     Wire.beginTransmission(_i2caddr);
-    Wire.write(0x00); // send command
-    Wire.write(0xB0+rowID);
-    Wire.write(0);
+    Wire.write(0x40);
+    for (byte k = 0; k < 16; k++) {
+        Wire.write(buffer[pos++]);
+    }
     Wire.endTransmission();
-
-    pos=rowID*SSD1306_LCDWIDTH;
-
-        for(byte j = 0; j < 8; j++){
-            Wire.beginTransmission(_i2caddr);
-            Wire.write(0x40);
-            for (byte k = 0; k < 16; k++) {
-                Wire.write(buff[pos++]);
-            }
-		    Wire.endTransmission();
-        }
-    
-
-    TWBR = twbrbackup;   
+  }
+  TWBR = twbrbackup;
 }
 
 void Piccolino_OLED::updateRow(int startID, int endID)
@@ -239,29 +255,40 @@ void Piccolino_OLED::drawPixel(int16_t x, int16_t y, uint16_t color)
   int row;
   unsigned char offset;
   unsigned char  preData; //previous data.
+  unsigned char result;
   unsigned char val;
 
-if (x>127||y>63) return;
-if (x<0||y<0) return;
+  if (x>127||y>63) return;
+  if (x<0||y<0) return;
 
   row = y/8;
   offset =y%8;
 
   x+=row*SSD1306_LCDWIDTH;
-  preData = buff[x];
+  if(sram) {
+    _v_ram.read(x, buff);
+    preData = buff[0];
+  } else {
+    preData = buff[x];
+  }
 
   //set pixel;
   val = 1<<offset;
 
   if(color!=0)
   {//white! set bit.
-    buff[x] = preData | val;
+    result = preData | val;
   }
   else
   {       //black! clear bit.
-    buff[x] = preData & (~val);
+    result = preData & (~val);
   }
-
+  if(sram) {
+    buff[0] = result;
+    _v_ram.write(x, buff);
+  } else {
+    buff[x] = result;
+  }
 }
 
 void Piccolino_OLED::clear()
@@ -454,5 +481,6 @@ size_t Piccolino_OLED::write(uint8_t c) {
 
 Piccolino_OLED::~Piccolino_OLED()
 {
-
+  if(buff)
+    free(buff);
 }
